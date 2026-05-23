@@ -2,6 +2,15 @@
 
 import { useState, useRef, useCallback, KeyboardEvent } from 'react'
 import ReactMarkdown from 'react-markdown'
+import {
+  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceArea,
+} from 'recharts'
+
+interface ChartPoint {
+  date: string
+  close: number
+  regime: string
+}
 
 interface AnalysisData {
   source: string
@@ -16,6 +25,7 @@ interface AnalysisData {
   date_start: string
   date_end: string
   rows: number
+  chart_data?: ChartPoint[]
 }
 
 interface ScanResult {
@@ -132,6 +142,76 @@ function StatDist({ dist }: { dist: AnalysisData['stationary_distribution'] }) {
         <span className="text-amber-400">{sidePct} flat</span>
         <span className="text-green-400">{bullPct} rising</span>
       </div>
+    </div>
+  )
+}
+
+function RegimeChart({ data }: { data: ChartPoint[] }) {
+  if (!data || data.length === 0) return null
+
+  // Group consecutive same-regime runs into ReferenceArea spans
+  const spans: { x1: string; x2: string; regime: string }[] = []
+  let i = 0
+  while (i < data.length) {
+    const r = data[i].regime
+    let j = i
+    while (j < data.length && data[j].regime === r) j++
+    spans.push({ x1: data[i].date, x2: data[j - 1].date, regime: r })
+    i = j
+  }
+
+  const regimeFill = (r: string) =>
+    r === 'Bull' ? '#22c55e18' : r === 'Bear' ? '#ef444418' : '#f59e0b12'
+
+  const prices = data.map(d => d.close)
+  const minP   = Math.min(...prices) * 0.994
+  const maxP   = Math.max(...prices) * 1.006
+
+  // Thin x-axis labels: show ~6 evenly spaced dates
+  const step  = Math.max(1, Math.floor(data.length / 6))
+  const ticks = data.filter((_, idx) => idx % step === 0).map(d => d.date)
+
+  return (
+    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs text-zinc-500 uppercase tracking-wide">Price + Regime History (1 yr)</p>
+        <div className="flex gap-3">
+          {(['Bull', 'Sideways', 'Bear'] as const).map(r => (
+            <span key={r} className={`text-xs ${
+              r === 'Bull' ? 'text-green-400' : r === 'Bear' ? 'text-red-400' : 'text-amber-400'
+            }`}>
+              ■ {r}
+            </span>
+          ))}
+        </div>
+      </div>
+      <ResponsiveContainer width="100%" height={180}>
+        <LineChart data={data} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+          {spans.map((s, idx) => (
+            <ReferenceArea key={idx} x1={s.x1} x2={s.x2} fill={regimeFill(s.regime)} ifOverflow="visible" />
+          ))}
+          <XAxis
+            dataKey="date"
+            ticks={ticks}
+            tick={{ fill: '#52525b', fontSize: 10 }}
+            axisLine={false}
+            tickLine={false}
+          />
+          <YAxis domain={[minP, maxP]} hide />
+          <Tooltip
+            contentStyle={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11, padding: '6px 10px' }}
+            labelStyle={{ color: '#a1a1aa', marginBottom: 2 }}
+            formatter={(val: unknown) => [`$${(val as number).toFixed(2)}`, 'Close']}
+          />
+          <Line
+            dataKey="close"
+            stroke="#a1a1aa"
+            strokeWidth={1.5}
+            dot={false}
+            isAnimationActive={false}
+          />
+        </LineChart>
+      </ResponsiveContainer>
     </div>
   )
 }
@@ -433,6 +513,10 @@ export default function Home() {
                     explain={`On any given down day, there's a ${(analysisData.persistence_diagonal.bear * 100).toFixed(0)}% chance tomorrow is also a down day. High = drops tend to keep dropping.`}
                   />
                 </div>
+
+                {analysisData.chart_data && analysisData.chart_data.length > 0 && (
+                  <RegimeChart data={analysisData.chart_data} />
+                )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">

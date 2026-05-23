@@ -369,6 +369,20 @@ def _hmm_summary(close: pd.Series, enabled: bool) -> dict:
 # --------------------------------------------------------------------------- #
 # Top-level analyze() — the single structured dict agents consume.
 # --------------------------------------------------------------------------- #
+def _build_chart_data(close: pd.Series, labels: pd.Series, n: int = 365) -> list:
+    """Last `n` days of {date, close, regime} for the price + regime ribbon chart."""
+    window = close.iloc[-n:]
+    aligned = labels.reindex(window.index).fillna(1).astype(int)
+    return [
+        {
+            "date":   str(idx.date()),
+            "close":  round(float(window[idx]), 4),
+            "regime": STATES[int(aligned[idx])],
+        }
+        for idx in window.index
+    ]
+
+
 def analyze(
     close: pd.Series,
     *,
@@ -457,6 +471,7 @@ def analyze(
         "hmm": _hmm_summary(close, hmm),
         "framework": "Roan (@RohOnChain)",
         "disclaimer": "Backtests are historical, not forward-looking.",
+        "chart_data": _build_chart_data(close, labels),
     }
 
 
