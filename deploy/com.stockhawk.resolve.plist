@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.stockhawk.resolve</string>
+
+    <!-- Weekly: resolve logged breakouts into live win-rate outcomes (the
+         second half of the self-updating edge loop). -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/homebrew/bin/uv</string>
+        <string>run</string>
+        <string>scripts/resolve_outcomes.py</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/blackstarr/CLAUDE COWORK/markov-ai-analyst</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/bin:/bin</string>
+    </dict>
+
+    <!-- Sundays at 18:00 ET (after the trading week, before Monday). -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Weekday</key>
+        <integer>0</integer>
+        <key>Hour</key>
+        <integer>18</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/blackstarr/Library/Logs/stockhawk/resolve_stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/blackstarr/Library/Logs/stockhawk/resolve_stderr.log</string>
+</dict>
+</plist>

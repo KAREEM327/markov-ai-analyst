@@ -6,7 +6,7 @@ type TradePlan = {
   entry: number; stop: number; target: number
   risk: number; reward: number; rr: number | null
 }
-type Edge = { verdict: string; win: number; expectancy: number; note: string }
+type Edge = { verdict: string; win: number; expectancy: number; note: string; live?: { winRate: number; decided: number } }
 type Forecast = { forecast_return: number; agrees: boolean; reaches_target: boolean }
 type Result = {
   ticker: string; price: number; breakout_pct: number; breakout_size: number
@@ -15,7 +15,7 @@ type Result = {
   regime: string; edge: Edge; forecast?: Forecast
 }
 type ScanData = {
-  regime: string; edge: Edge; scanned_at: string; universe_size: number; results: Result[]
+  regime: string; edge: Edge; scanned_at: string; universe_size: number; results: Result[]; cached?: boolean
 }
 type Candle = { t: string; o: number; h: number; l: number; c: number }
 
@@ -87,6 +87,15 @@ export default function Home() {
   const [error, setError] = useState('')
   const [open, setOpen] = useState<string | null>(null)
 
+  // Show the last cached scan instantly on load; the live scan is slow (60-70s),
+  // so the common "just show me" case serves cache and refreshes on demand.
+  useEffect(() => {
+    fetch('/api/scan')
+      .then((res) => (res.status === 204 ? null : res.json()))
+      .then((d) => { if (d && !d.error) setData(d) })
+      .catch(() => {})
+  }, [])
+
   async function scan() {
     setScanning(true); setError(''); setOpen(null)
     try {
@@ -137,6 +146,11 @@ export default function Home() {
 
         {data && (
           <>
+            {data.cached && (
+              <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 10 }}>
+                Showing last scan from {new Date(data.scanned_at).toLocaleString()} — hit “Scan now” for a live refresh.
+              </div>
+            )}
             <div style={{ margin: '0 0 18px', padding: '14px 18px', borderRadius: 12, background: regime === 'Bull' ? 'rgba(0,255,136,.07)' : regime === 'Bear' ? 'rgba(255,51,102,.07)' : 'rgba(245,165,36,.07)', border: `1px solid ${regimeColor}40`, display: 'flex', alignItems: 'center', gap: 14 }}>
               <div style={{ width: 42, height: 42, borderRadius: '50%', background: `${regimeColor}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: regimeColor, fontSize: 22, fontWeight: 700 }}>
                 {regime === 'Bull' ? '↑' : regime === 'Bear' ? '↓' : '→'}
@@ -214,6 +228,9 @@ export default function Home() {
 
                       <div style={{ fontSize: 11, color: '#5a6472', marginTop: 12 }}>
                         Why this grade: {r.edge.win}% historical win rate, {r.edge.expectancy >= 0 ? '+' : ''}{r.edge.expectancy}R per trade ({regime} regime, 517 backtested 4h breakouts).
+                        {r.edge.live && (
+                          <> {' '}Live so far: {r.edge.live.winRate}% win rate over {r.edge.live.decided} resolved {regime}-regime breakouts since launch.</>
+                        )}
                         {r.forecast && (
                           <> {' '}TimesFM forecast {r.forecast.agrees ? 'agrees' : 'disagrees'} ({r.forecast.forecast_return >= 0 ? '+' : ''}{(r.forecast.forecast_return * 100).toFixed(1)}% over ~10 days){r.forecast.agrees && r.forecast.reaches_target ? ' and reaches target' : r.forecast.agrees ? ' but stalls below target' : ''} — a second opinion, not a trade signal.</>
                         )}

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { exec } from 'child_process'
 import { promisify } from 'util'
-import { readFileSync, appendFileSync, mkdirSync } from 'fs'
+import { readFileSync, appendFileSync, mkdirSync, writeFileSync } from 'fs'
 import path from 'path'
 
 const execAsync = promisify(exec)
@@ -53,7 +53,20 @@ export async function POST() {
     ])
 
     const parsed = JSON.parse(scanOut.stdout.trim())
-    const edge = REGIME_EDGE[regime] ?? REGIME_EDGE.Sideways
+    const edge: Record<string, unknown> = { ...(REGIME_EDGE[regime] ?? REGIME_EDGE.Sideways) }
+
+    // Blend the self-updating edge loop: if resolve_outcomes.py has scored enough
+    // real breakouts in this regime, surface the live win rate next to the static
+    // backtest stat. ponytail: gate on MIN_DECIDED so a handful of trades can't
+    // masquerade as calibration; below that, the UI shows the backtest stat alone.
+    const MIN_DECIDED = 20
+    try {
+      const oc = JSON.parse(readFileSync(path.join(process.cwd(), 'data', 'outcomes.json'), 'utf8'))
+      const lr = oc.regimes?.[regime]
+      if (lr && lr.decided >= MIN_DECIDED && lr.live_win_rate != null) {
+        edge.live = { winRate: lr.live_win_rate, decided: lr.decided }
+      }
+    } catch { /* no outcomes yet — backtest stat stands alone */ }
 
     let results = (parsed.results as Record<string, unknown>[])
       .filter((r) => r.passed)
@@ -117,15 +130,37 @@ export async function POST() {
       if (lines.length) appendFileSync(path.join(logDir, 'breakout_log.jsonl'), lines.join('\n') + '\n')
     } catch { /* logging is best-effort, never block the scan */ }
 
-    return NextResponse.json({
+    const payload = {
       regime,
       edge,
       scanned_at: new Date().toISOString(),
       universe_size: UNIVERSE.length,
       results,
-    })
+    }
+
+    // Cache the last good scan so GET can serve it instantly — the live POST scan
+    // is 60-70s (up to ~250s with the forecast pass) and risks the request timeout.
+    // ponytail: a single JSON file, no DB; GET reads it, the UI shows it on load.
+    try {
+      const logDir = path.join(process.cwd(), 'data')
+      mkdirSync(logDir, { recursive: true })
+      writeFileSync(path.join(logDir, 'last_scan.json'), JSON.stringify(payload))
+    } catch { /* cache write is best-effort */ }
+
+    return NextResponse.json(payload)
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
     return NextResponse.json({ error: `Scan failed: ${msg}` }, { status: 500 })
+  }
+}
+
+// Serve the last cached scan instantly (no live work). Returns { cached: true } so
+// the UI can flag staleness; 204 when no scan has run yet.
+export async function GET() {
+  try {
+    const cached = readFileSync(path.join(process.cwd(), 'data', 'last_scan.json'), 'utf8')
+    return NextResponse.json({ ...JSON.parse(cached), cached: true })
+  } catch {
+    return new NextResponse(null, { status: 204 })
   }
 }
