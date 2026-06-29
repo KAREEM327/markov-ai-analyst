@@ -1,88 +1,44 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0a0a0a;
-  --foreground: #e4e4e7;
+  --bg: #050508;
+  --surface: rgba(13, 13, 26, 0.78);
+  --border: rgba(0, 212, 255, 0.12);
+  --cyan: #00d4ff;
+  --violet: #8b5cf6;
+  --green: #00ff88;
+  --red: #ff3366;
+  --text: #e8eaf0;
+  --muted: #6b7280;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--bg);
+  --color-text: var(--text);
+  --font-display: var(--font-display);
+  --font-mono: var(--font-mono);
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-display), sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
-.prose-analysis h2 {
-  font-size: 1.125rem;
-  font-weight: 700;
-  color: #ffffff;
-  margin-top: 2rem;
-  margin-bottom: 0.75rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid #27272a;
+#hero-bg {
+  position: fixed;
+  inset: 0;
+  background: url('/hero-bg.jpg') center 30% / cover no-repeat;
+  transform: scale(1.03);
+  z-index: 0;
 }
 
-.prose-analysis h2:first-child {
-  margin-top: 0;
+#bg-overlay {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(5,5,8,.92) 0%, rgba(5,5,8,.82) 50%, rgba(5,5,8,.9) 100%);
+  z-index: 1;
 }
 
-.prose-analysis h3 {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #71717a;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin-top: 1.5rem;
-  margin-bottom: 0.5rem;
-}
-
-.prose-analysis p {
-  color: #d4d4d8;
-  line-height: 1.8;
-  margin-bottom: 0.875rem;
-}
-
-.prose-analysis strong {
-  color: #ffffff;
-  font-weight: 600;
-}
-
-.prose-analysis ul {
-  list-style: none;
-  padding: 0;
-  margin-bottom: 0.875rem;
-}
-
-.prose-analysis ul li {
-  color: #d4d4d8;
-  padding-left: 1.25rem;
-  position: relative;
-  line-height: 1.8;
-  margin-bottom: 0.25rem;
-}
-
-.prose-analysis ul li::before {
-  content: '—';
-  position: absolute;
-  left: 0;
-  color: #3f3f46;
-}
-
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
-}
-
-.cursor::after {
-  content: '▋';
-  display: inline-block;
-  animation: blink 0.9s ease-in-out infinite;
-  color: #52525b;
-  margin-left: 1px;
-}
+.font-mono { font-family: var(--font-mono), monospace; }

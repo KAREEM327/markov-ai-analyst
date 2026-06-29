@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# runtime breakout log + resolved outcomes (self-updating edge loop)
+data/
+
+# python
+__pycache__/
